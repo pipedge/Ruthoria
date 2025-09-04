@@ -1,0 +1,418 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Ruthoria Brand Invoice Generator</title>
+  <!-- Libraries for export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    :root{--primary:#123c7b;--accent:#1e5bd8;--muted:#eef2f7;--ink:#0f172a}
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,'Noto Sans',sans-serif; background:#f6f8fb; color:var(--ink); margin:0}
+    header{background:linear-gradient(135deg,var(--primary),var(--accent)); color:#fff; padding:24px 20px 80px}
+    .wrap{max-width:1100px; margin:0 auto; display:flex; align-items:center; gap:16px}
+    .logo{height:48px; width:48px; object-fit:cover; border-radius:10px; background:#fff}
+    h1{font-size:24px; margin:0}
+    .container{max-width:1100px; margin:-60px auto 80px; padding:0 16px}
+    .card{background:#fff; border-radius:14px; box-shadow:0 10px 30px rgba(16,24,40,.06); padding:18px}
+    .grid{display:grid; gap:12px}
+    .grid.cols-2{grid-template-columns:1fr 1fr}
+    .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+    label{font-size:12px; color:#475569; display:block; margin-bottom:6px}
+    input, select, textarea{width:100%; padding:10px 12px; border:1px solid #e6eef6; border-radius:10px; background:#fff}
+    textarea{min-height:68px}
+    .row{display:flex; gap:10px}
+    .btn{background:var(--primary); color:#fff; border:0; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:700}
+    .btn.secondary{background:#eef2f9; color:var(--ink)}
+    .btn.ghost{background:transparent; border:1px solid #d3dbe8; color:var(--ink)}
+    .toolbar{display:flex; gap:10px; flex-wrap:wrap}
+    .section-title{font-weight:700; font-size:13px; text-transform:uppercase; color:#334155; margin:8px 0}/* Preview */
+#preview{margin-top:18px; background:#fff; border-radius:14px; box-shadow:0 12px 30px rgba(16,24,40,.06)}
+.invoice{padding:24px; width:800px; max-width:100%; margin:0 auto}
+.invoice-header{background:linear-gradient(135deg,var(--primary),var(--accent)); color:#fff; padding:18px; border-radius:8px; display:flex; justify-content:space-between; align-items:center}
+.invoice-meta{display:grid; grid-template-columns:1fr 1fr; gap:10px; background:#f3f7fb; border-radius:8px; padding:12px; margin-top:12px}
+.muted{color:#6b7280}
+
+table{width:100%; border-collapse:collapse; margin-top:14px}
+thead{background:#0f172a; color:#fff}
+th, td{padding:10px 8px; border:1px solid #e6eef6; font-size:14px}
+th{font-weight:700}
+.right{text-align:right}
+.total-row{background:#0f172a; color:#fff; font-weight:800}
+
+.foot-notes{display:grid; grid-template-columns:2fr 1fr; gap:12px; margin-top:14px}
+.note-box{background:#fbfdff; border:1px dashed #dbe7f7; border-radius:8px; padding:10px}
+
+@media print{
+  body{background:#fff}
+  header,.card .toolbar{display:none}
+  #preview{margin:0; box-shadow:none}
+  .invoice{padding:0}
+}
+
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <img id="headerLogo" class="logo" alt="logo" />
+      <h1>Ruthoria Brand — Receipt / Invoice Generator</h1>
+    </div>
+  </header>  <div class="container">
+    <div class="card">
+      <div class="section-title">Brand</div>
+      <div class="grid cols-3">
+        <div>
+          <label>Business Name</label>
+          <input id="bizName" value="Ruthoria Brand" />
+        </div>
+        <div>
+          <label>Business Email</label>
+          <input id="bizEmail" value="ruthoriabrand@gmail.com" />
+        </div>
+        <div>
+          <label>Phone</label>
+          <input id="bizPhone" value="+2347041852461" />
+        </div>
+        <div>
+          <label>Address (optional)</label>
+          <input id="bizAddress" placeholder="123 Anywhere St., City" />
+        </div>
+        <div>
+          <label>Logo (upload)</label>
+          <input id="logoFile" type="file" accept="image/*" />
+        </div>
+        <div>
+          <label>Logo (URL)</label>
+          <input id="logoUrl" placeholder="https://..." />
+        </div>
+      </div><div class="section-title">Customer</div>
+  <div class="grid cols-3">
+    <div>
+      <label>Customer Name</label>
+      <input id="custName" placeholder="John Doe" />
+    </div>
+    <div>
+      <label>Customer Phone</label>
+      <input id="custPhone" placeholder="+234..." />
+    </div>
+    <div>
+      <label>Customer Email</label>
+      <input id="custEmail" placeholder="john@email.com" />
+    </div>
+    <div>
+      <label>Customer Address</label>
+      <input id="custAddress" placeholder="Address" />
+    </div>
+    <div>
+      <label>Date</label>
+      <input id="invDate" type="date" />
+    </div>
+    <div>
+      <label>Currency</label>
+      <select id="currency">
+        <option value="₦">₦ (NGN)</option>
+        <option value="$">$ (USD)</option>
+        <option value="€">€ (EUR)</option>
+        <option value="£">£ (GBP)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section-title">Items</div>
+  <div class="toolbar">
+    <button id="addItem" class="btn">+ Add Item</button>
+    <button id="clearItems" class="btn secondary">Clear Items</button>
+  </div>
+
+  <table id="itemsTable">
+    <thead>
+      <tr>
+        <th style="width:50%">Description</th>
+        <th style="width:12%">Qty</th>
+        <th style="width:18%">Unit Price</th>
+        <th style="width:20%">Line Total</th>
+      </tr>
+    </thead>
+    <tbody id="itemsBody"></tbody>
+  </table>
+
+  <div class="grid cols-3" style="margin-top:12px">
+    <div>
+      <label>Notes</label>
+      <textarea id="notes">Payment should be made 7 days before delivery.</textarea>
+    </div>
+    <div>
+      <label>Tax % (optional)</label>
+      <input id="tax" type="number" min="0" step="0.01" placeholder="0" />
+    </div>
+    <div>
+      <label>Discount (flat, optional)</label>
+      <input id="discount" type="number" min="0" step="0.01" placeholder="0" />
+    </div>
+  </div>
+
+  <div class="section-title">Payment Info</div>
+  <div class="grid cols-3">
+    <div>
+      <label>Bank Name</label>
+      <input id="bankName" placeholder="Bank" />
+    </div>
+    <div>
+      <label>Account Number</label>
+      <input id="accountNo" placeholder="0000000000" />
+    </div>
+    <div>
+      <label>Account Holder</label>
+      <input id="accountName" value="Ruthoria Brand" />
+    </div>
+  </div>
+
+  <div class="toolbar" style="margin-top:16px">
+    <button id="printBtn" class="btn">Print</button>
+    <button id="downloadPdf" class="btn">Download PDF</button>
+    <button id="downloadImg" class="btn">Download Image</button>
+    <button id="newBtn" class="btn ghost">New Invoice</button>
+  </div>
+</div>
+
+<div id="preview" class="card">
+  <div class="invoice" id="invoiceArea" aria-label="Invoice preview"></div>
+</div>
+
+  </div>  <script>
+  (function(){
+    const $ = id => document.getElementById(id);
+
+    function todayISO(){ const d=new Date(); return d.toISOString().slice(0,10); }
+    function nl2br(s){ return String(s).replace(/\n/g,'<br>'); }
+    function escapeHtml(str){
+      return String(str||'').replace(/[&<>\"']/g, s=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[s]));
+    }
+
+    function nextInvoiceNumber(){
+      const key='ruthoria_invoice_counter_v1';
+      let n = parseInt(localStorage.getItem(key)||'0',10)+1;
+      localStorage.setItem(key,String(n));
+      const year = new Date().getFullYear();
+      return `INV-${year}-${String(n).padStart(4,'0')}`;
+    }
+
+    // state
+    let invoiceNo = nextInvoiceNumber();
+    $('invDate').value = todayISO();
+
+    // items
+    const itemsBody = $('itemsBody');
+    function addRow(desc='', qty=1, price=0){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input class="desc" placeholder="Item description" value="${escapeHtml(desc)}"/></td>
+        <td><input class="qty" type="number" min="0" step="1" value="${qty}"/></td>
+        <td><input class="price" type="number" min="0" step="0.01" value="${price}"/></td>
+        <td class="right lineTotal">0</td>
+      `;
+      // double-click to remove row
+      tr.addEventListener('dblclick', ()=>{ tr.remove(); render(); });
+      itemsBody.appendChild(tr);
+      ['input','change'].forEach(ev => tr.addEventListener(ev, render));
+      render();
+    }
+
+    $('addItem').addEventListener('click', ()=> addRow());
+    $('clearItems').addEventListener('click', ()=>{ itemsBody.innerHTML=''; render(); });
+
+    // start with one blank row
+    addRow();
+
+    // logo handling
+    const headerLogo = $('headerLogo');
+    function setLogo(src){ headerLogo.src = src || ''; }
+    $('logoUrl').addEventListener('input', e => setLogo(e.target.value.trim()));
+    $('logoFile').addEventListener('change', e => {
+      const f = e.target.files && e.target.files[0];
+      if(!f) return;
+      const r = new FileReader();
+      r.onload = ()=> setLogo(r.result);
+      r.readAsDataURL(f);
+    });
+
+    function money(v){ const sym = $('currency').value||'₦'; return `${sym} ${Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}`; }
+    function getItems(){
+      return Array.from(itemsBody.querySelectorAll('tr')).map(tr=>{
+        const desc = tr.querySelector('.desc').value.trim();
+        const qty = parseFloat(tr.querySelector('.qty').value)||0;
+        const price = parseFloat(tr.querySelector('.price').value)||0;
+        return {desc, qty, price, total: qty*price};
+      });
+    }
+
+    function render(){
+      const items = getItems();
+      Array.from(itemsBody.querySelectorAll('tr')).forEach((tr,i)=>{
+        tr.querySelector('.lineTotal').textContent = money(items[i].total);
+      });
+
+      const subtotal = items.reduce((s,it)=>s+it.total, 0);
+      const taxPct = parseFloat($('tax').value)||0;
+      const discount = parseFloat($('discount').value)||0;
+      const tax = subtotal * (taxPct/100);
+      const grand = Math.max(0, subtotal + tax - discount);
+
+      const invoiceHTML = `
+        <div class="invoice-header">
+          <div style="display:flex;gap:12px;align-items:center">
+            <img src="${headerLogo.src||''}" alt="logo" style="height:44px;width:44px;object-fit:cover;border-radius:8px;background:#fff"/>
+            <div>
+              <div style="font-size:18px;font-weight:800">${escapeHtml($('bizName').value||'Ruthoria Brand')}</div>
+              <div class="muted">${escapeHtml($('bizAddress').value||'')}</div>
+              <div class="muted">${escapeHtml($('bizEmail').value||'')} | ${escapeHtml($('bizPhone').value||'')}</div>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:800;font-size:18px">INVOICE</div>
+            <div class="muted">No: ${invoiceNo}</div>
+            <div class="muted">Date: ${$('invDate').value||todayISO()}</div>
+          </div>
+        </div>
+
+        <div class="invoice-meta">
+          <div>
+            <div class="muted">From</div>
+            <div style="font-weight:700">${escapeHtml($('bizName').value||'')}</div>
+            <div class="muted">${escapeHtml($('bizEmail').value||'')}</div>
+            <div class="muted">${escapeHtml($('bizPhone').value||'')}</div>
+          </div>
+          <div>
+            <div class="muted">Bill To</div>
+            <div style="font-weight:700">${escapeHtml($('custName').value||'')}</div>
+            <div class="muted">${escapeHtml($('custEmail').value||'')}</div>
+            <div class="muted">${escapeHtml($('custPhone').value||'')}</div>
+            <div class="muted">${escapeHtml($('custAddress').value||'')}</div>
+          </div>
+        </div>
+
+        <table aria-hidden="false">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Description</th>
+              <th class="right">Qty</th>
+              <th class="right">Unit</th>
+              <th class="right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map((it,idx)=>`
+              <tr>
+                <td style="width:6%">${idx+1}</td>
+                <td>${escapeHtml(it.desc||'-')}</td>
+                <td class="right" style="width:10%">${it.qty}</td>
+                <td class="right" style="width:18%">${money(it.price)}</td>
+                <td class="right" style="width:18%">${money(it.total)}</td>
+              </tr>`).join('')}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4" class="right"><strong>Subtotal</strong></td>
+              <td class="right">${money(subtotal)}</td>
+            </tr>
+            <tr>
+              <td colspan="4" class="right"><strong>Tax (${taxPct}%)</strong></td>
+              <td class="right">${money(tax)}</td>
+            </tr>
+            <tr>
+              <td colspan="4" class="right"><strong>Discount</strong></td>
+              <td class="right">${money(discount)}</td>
+            </tr>
+            <tr class="total-row">
+              <td colspan="4" class="right">Grand Total</td>
+              <td class="right">${money(grand)}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="foot-notes">
+          <div class="note-box">
+            <div class="muted" style="margin-bottom:6px">Notes</div>
+            <div>${nl2br(escapeHtml($('notes').value||''))}</div>
+          </div>
+          <div class="note-box">
+            <div class="muted" style="margin-bottom:6px">Payment Information</div>
+            <div>Bank: <strong>${escapeHtml($('bankName').value||'-')}</strong></div>
+            <div>Account No: <strong>${escapeHtml($('accountNo').value||'-')}</strong></div>
+            <div>Account Name: <strong>${escapeHtml($('accountName').value||'-')}</strong></div>
+          </div>
+        </div>
+
+        <div style="text-align:center;margin-top:14px;color:#6b7280">Thank you for your business.</div>
+      `;
+
+      $('invoiceArea').innerHTML = invoiceHTML;
+    }
+
+    // bind inputs
+    const bind = ['bizName','bizEmail','bizPhone','bizAddress','logoUrl','custName','custPhone','custEmail','custAddress','invDate','tax','discount','notes','bankName','accountNo','accountName','currency'];
+    bind.forEach(id => $(id).addEventListener('input', render));
+
+    // export functions
+    $('printBtn').addEventListener('click', ()=>{ render(); window.print(); });
+
+    $('downloadPdf').addEventListener('click', async ()=>{
+      render();
+      const element = $('invoiceArea');
+      const opt = {
+        margin: 0.4,
+        filename: `${invoiceNo}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      };
+      // html2pdf will automatically open/save the file
+      html2pdf().set(opt).from(element).save();
+    });
+
+    $('downloadImg').addEventListener('click', ()=>{
+      render();
+      const el = $('invoiceArea');
+      html2canvas(el, { scale: 2, useCORS: true }).then(canvas => {
+        canvas.toBlob(function(blob){
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = `${invoiceNo}.png`;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          URL.revokeObjectURL(link.href);
+        }, 'image/png');
+      }).catch(err=>{
+        alert('Image export failed: '+ err.message);
+      });
+    });
+
+    // new invoice
+    $('newBtn').addEventListener('click', ()=>{
+      // clear form while keeping brand details
+      const keep = ['bizName','bizEmail','bizPhone','bizAddress','logoUrl','accountName'];
+      document.querySelectorAll('input,textarea').forEach(inp=>{
+        if(keep.includes(inp.id)) return;
+        if(inp.type === 'date') inp.value = todayISO();
+        else if(inp.type === 'file') inp.value = '';
+        else inp.value = '';
+      });
+      $('notes').value = 'Payment should be made 7 days before delivery.';
+      $('currency').value = '₦';
+      // reset items
+      itemsBody.innerHTML = '';
+      addRow();
+      invoiceNo = nextInvoiceNumber();
+      setLogo('');
+      render();
+    });
+
+    // initial render
+    render();
+  })();
+  </script></body>
+</html>
